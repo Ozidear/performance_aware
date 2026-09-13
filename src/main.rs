@@ -19,7 +19,10 @@ struct Args {
     seed: u64,
 
     #[arg(long, default_value = "point_pairs.json")]
-    output: PathBuf,
+    json_output: PathBuf,
+
+    #[arg(long, default_value = "haversine_answers.f64")]
+    answer_output: PathBuf,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,25 +58,32 @@ fn random_point_pair(rng: &mut impl RngExt) -> PointPair {
 
 //TODO:
 // cluster/uniform
-// binary output
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let mut rng = StdRng::seed_from_u64(args.seed);
 
-    let mut writer = BufWriter::new(File::create(args.output)?);
-    let mut serializer = serde_json::Serializer::new(&mut writer);
+    let mut json_writer = BufWriter::new(File::create(args.json_output)?);
+    let mut serializer = serde_json::Serializer::new(&mut json_writer);
     let mut point_pairs = serializer.serialize_seq(Some(args.count))?;
+
+    let mut answer_writer = BufWriter::new(File::create(args.answer_output)?);
 
     let mut haversine_sum = 0.0;
 
     for _ in 0..args.count {
         let point_pair = random_point_pair(&mut rng);
         point_pairs.serialize_element(&point_pair)?;
-        haversine_sum += haversine(&point_pair, EARTH_RADIUS_KM);
+
+        let haversine_distance = haversine(&point_pair, EARTH_RADIUS_KM);
+        answer_writer.write_all(&haversine_distance.to_le_bytes())?;
+        haversine_sum += haversine_distance;
     }
     point_pairs.end()?;
-    writer.flush()?;
+    json_writer.flush()?;
+
+    answer_writer.write_all(&haversine_sum.to_le_bytes())?;
+    answer_writer.flush()?;
 
     let average_haversine = haversine_sum / args.count as f64;
     println!("Average Haversine distance: {average_haversine}");
