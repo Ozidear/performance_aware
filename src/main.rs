@@ -1,5 +1,15 @@
+use clap::Parser;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
 use serde::{Deserialize, Serialize};
+
+#[derive(Parser)]
+struct Args {
+    #[arg(long)]
+    count: u32,
+
+    #[arg(long)]
+    seed: u64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PointPair {
@@ -19,9 +29,12 @@ fn random_point_pair(rng: &mut impl RngExt) -> PointPair {
 }
 
 fn main() {
-    let mut rng = StdRng::seed_from_u64(1);
+    let args = Args::parse();
+    let mut rng = StdRng::seed_from_u64(args.seed);
 
-    let point_pairs: [PointPair; 1_000] = std::array::from_fn(|_| random_point_pair(&mut rng));
+    let point_pairs: Vec<PointPair> = (0..args.count)
+        .map(|_| random_point_pair(&mut rng))
+        .collect();
 
     println!("{point_pairs:?}");
 }
