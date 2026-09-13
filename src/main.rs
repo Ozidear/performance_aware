@@ -21,14 +21,14 @@ struct PointPair {
 
 fn random_point_pair(rng: &mut impl RngExt) -> PointPair {
     PointPair {
-        x0: rng.random_range(-180.0..180.0),
+        x0: rng.random_range(-180.0..180.0), // is this the best rand algorithm?
         y0: rng.random_range(-90.0..90.0),
         x1: rng.random_range(-180.0..180.0),
         y1: rng.random_range(-90.0..90.0),
     }
 }
 
-fn main() {
+fn main() -> Result<(), serde_json::Error> {
     let args = Args::parse();
     let mut rng = StdRng::seed_from_u64(args.seed);
 
@@ -36,5 +36,7 @@ fn main() {
         .map(|_| random_point_pair(&mut rng))
         .collect();
 
-    println!("{point_pairs:?}");
+    println!("{}", serde_json::to_string(&point_pairs)?);
+
+    Ok(())
 }
