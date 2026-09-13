@@ -1,5 +1,6 @@
 use clap::Parser;
 use rand::{RngExt, SeedableRng, rngs::StdRng};
+use serde::ser::{SerializeSeq, Serializer};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -11,8 +12,8 @@ const EARTH_RADIUS_KM: f64 = 6_372.8;
 
 #[derive(Parser)]
 struct Args {
-    #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
-    count: u32,
+    #[arg(long)]
+    count: usize,
 
     #[arg(long)]
     seed: u64,
@@ -60,21 +61,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let mut rng = StdRng::seed_from_u64(args.seed);
 
-    let point_pairs: Vec<PointPair> = (0..args.count)
-        .map(|_| random_point_pair(&mut rng))
-        .collect();
+    let mut writer = BufWriter::new(File::create(args.output)?);
+    let mut serializer = serde_json::Serializer::new(&mut writer);
+    let mut point_pairs = serializer.serialize_seq(Some(args.count))?;
 
-    let average_haversine = point_pairs
-        .iter()
-        .map(|point_pair| haversine(point_pair, EARTH_RADIUS_KM))
-        .sum::<f64>()
-        / point_pairs.len() as f64;
-    println!("Average Haversine distance: {average_haversine}");
+    let mut haversine_sum = 0.0;
 
-    let output_file = File::create(args.output)?;
-    let mut writer = BufWriter::new(output_file);
-    serde_json::to_writer(&mut writer, &point_pairs)?;
+    for _ in 0..args.count {
+        let point_pair = random_point_pair(&mut rng);
+        point_pairs.serialize_element(&point_pair)?;
+        haversine_sum += haversine(&point_pair, EARTH_RADIUS_KM);
+    }
+    point_pairs.end()?;
     writer.flush()?;
+
+    let average_haversine = haversine_sum / args.count as f64;
+    println!("Average Haversine distance: {average_haversine}");
 
     Ok(())
 }
