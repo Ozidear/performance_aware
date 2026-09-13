@@ -36,6 +36,11 @@ fn random_point_pair(rng: &mut impl RngExt) -> PointPair {
     }
 }
 
+//TODO:
+// cluster/uniform
+// haversine avg
+// binary output
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let mut rng = StdRng::seed_from_u64(args.seed);
