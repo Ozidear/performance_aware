@@ -57,7 +57,9 @@ fn random_point_pair(rng: &mut impl RngExt) -> PointPair {
 }
 
 //TODO:
-// cluster/uniform
+// cluster/uniform?
+// could improve this a ton by declaring functions that will act as context managers
+// taking closures and returning results
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
